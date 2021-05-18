@@ -11,7 +11,7 @@ export function test() {
     case 'win32':
       // Note: All tests passed
       // win32RecordEntireScreenTest();
-      // win32RecordAreaTest();
+      win32RecordAreaTest();
       // win32RecordWindowTest();
       break;
     case 'linux':

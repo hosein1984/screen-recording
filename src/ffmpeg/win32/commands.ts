@@ -12,7 +12,12 @@ import {
   LIBX64_SIZE_FILTER,
   MIX_AUDIO_SOURCES_FILTER,
 } from '../commons/filters';
-import { applyPreset, defaultPreset, libx264Preset } from '../commons/presets';
+import {
+  applyPreset,
+  commonVideoPreset,
+  defaultPreset,
+  libx264Preset,
+} from '../commons/presets';
 import { handleFfmpegEvents } from '../commons/event-handlers';
 
 export function listDirectShowDevices(
@@ -93,16 +98,19 @@ export async function recordScreen(
 
   // command.inputFormat('gdigrab');
   applyPreset(command, libx264Preset);
+  applyPreset(command, commonVideoPreset);
 
   if (isRecordingDesktopAudio) {
     command
       .input(`audio=${virtualAudioRecorder}`)
       .inputFormat('dshow')
       .withOption('-strict -2');
+    applyPreset(command, commonVideoPreset);
   }
 
   if (isRecordingMicrophoneAudio) {
     command.input(`audio=${microphone}`).inputFormat('dshow');
+    applyPreset(command, commonVideoPreset);
   }
 
   command.complexFilter([
