@@ -7,7 +7,7 @@ import {
   RecordScreenOptions,
 } from '../commons/types';
 import ffmpeg from 'fluent-ffmpeg';
-import { DirectShowDevices, Win32RecordScreenOptions } from './types';
+import { DirectShowDevices } from './types';
 import {
   LIBX64_SIZE_FILTER,
   MIX_AUDIO_SOURCES_FILTER,
@@ -30,7 +30,7 @@ export function listDirectShowDevices(
 }
 
 export async function recordScreen(
-  options: Win32RecordScreenOptions,
+  options: RecordScreenOptions,
   callbacks: FfmpegCommandCallbacks
 ): Promise<void> {
   const {

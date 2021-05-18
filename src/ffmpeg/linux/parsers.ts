@@ -1,6 +1,6 @@
 import { flatten } from 'lodash';
 import { DeviceIOType } from '../commons/types';
-import { AudioDevice, DisplayInfo, Screen } from './types';
+import { AudioDevice, Display, Screen } from './types';
 
 /**
  * Parses the xdpyinfo command output and extract the display and screen info from there.
@@ -10,24 +10,24 @@ import { AudioDevice, DisplayInfo, Screen } from './types';
  * @param input xdpyinfo command output
  * @returns
  */
-export function parseXdpyinfoOutput(input: string): DisplayInfo[] {
-  const DISPLAY_ID_PATTERN = /^name\sof\sdisplay:\s+:(.*)/;
-  const DEFAULT_SCREEN_NUMBER_PATTERN = /^default\sscreen\snumber:\s(.*)/;
+export function parseXdpyinfoOutput(input: string): Display[] {
+  const DISPLAY_ID_PATTERN = /^name\sof\sdisplay:\s+(.*)/;
+  const DEFAULT_SCREEN_ID_PATTERN = /^default\sscreen\snumber:\s+(.*)/;
   const SCREEN_ID_PATTERN = /^screen\s#(.*):/;
   const SCREEN_DIMENSIONS_PATTERN = /^\s+dimensions:\s+([0-9]+x[0-9]+)\spixels/;
 
   const isDisplayIdLine = (line: string) =>
     line.search(DISPLAY_ID_PATTERN) > -1;
 
-  const isDefaultScreenNumberLine = (line: string) =>
-    line.search(DEFAULT_SCREEN_NUMBER_PATTERN) > -1;
+  const isDefaultScreenIdLine = (line: string) =>
+    line.search(DEFAULT_SCREEN_ID_PATTERN) > -1;
 
   const isScreenIdLine = (line: string) => line.search(SCREEN_ID_PATTERN) > -1;
 
   const isScreenDimensionsLine = (line: string) =>
     line.search(SCREEN_DIMENSIONS_PATTERN) > -1;
 
-  const displays: DisplayInfo[] = [];
+  const displays: Display[] = [];
 
   for (const line of input.split('\n')) {
     if (isDisplayIdLine(line)) {
@@ -37,7 +37,7 @@ export function parseXdpyinfoOutput(input: string): DisplayInfo[] {
         const [, displayId] = matchResults;
 
         displays.push({
-          id: +displayId,
+          id: displayId,
           screens: [],
         });
       }
@@ -45,14 +45,14 @@ export function parseXdpyinfoOutput(input: string): DisplayInfo[] {
       continue;
     }
 
-    if (isDefaultScreenNumberLine(line) && displays.length > 0) {
+    if (isDefaultScreenIdLine(line) && displays.length > 0) {
       const lastDisplay = displays[displays.length - 1];
-      const matchResults = line.match(DEFAULT_SCREEN_NUMBER_PATTERN);
+      const matchResults = line.match(DEFAULT_SCREEN_ID_PATTERN);
 
       if (matchResults) {
-        const [, defaultScreenNumber] = matchResults;
+        const [, defaultScreenId] = matchResults;
 
-        lastDisplay.defaultScreen = +defaultScreenNumber;
+        lastDisplay.defaultScreenId = defaultScreenId;
       }
 
       continue;
@@ -66,7 +66,7 @@ export function parseXdpyinfoOutput(input: string): DisplayInfo[] {
         const [, screenId] = matchResults;
 
         lastDisplay.screens.push({
-          id: +screenId,
+          id: screenId,
           width: 0,
           height: 0,
           monitors: [],
@@ -108,10 +108,7 @@ export function parseXdpyinfoOutput(input: string): DisplayInfo[] {
  * @param displays the list of displays that we already have from xdpyinfo
  * @returns
  */
-export function parseXrandrOutput(
-  input: string,
-  displays: DisplayInfo[]
-): void {
+export function parseXrandrOutput(input: string, displays: Display[]): void {
   const SCREEN_ID_PATTERN = /^Screen\s([0-9]+):/;
   const CONNECTED_MONITOR_PATTERN = /^([\w'-]+)\sconnected\s?(primary)?\s([0-9]+x[0-9]+)\+([0-9]+\+[0-9]+)/;
 
@@ -129,7 +126,7 @@ export function parseXrandrOutput(
         const [, screenId] = matchResults;
 
         const screen = flatten(displays.map((d) => d.screens)).find(
-          (s) => s.id === +screenId
+          (s) => s.id === screenId
         );
 
         currentScreen = screen;

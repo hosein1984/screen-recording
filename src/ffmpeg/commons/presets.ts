@@ -20,6 +20,6 @@ export const defaultPreset: PresetFunc = (command) => {
   command
     .withOption('-rtbufsize 150M')
     // .withOutputFormat('mp4')
-    .outputFPS(30)
-    .addOption('-loglevel error');
+    .outputFPS(30);
+  // .addOption('-loglevel error');
 };

@@ -50,7 +50,10 @@ export type RecordScreenOptions = {
   captureDesktopAudio: boolean;
   captureMicrophoneAudio: boolean;
   filePath: string;
-  captureTarget: CaptureTarget;
+  captureTarget:
+    | EntireScreenCaptureTarget
+    | AreaCaptureTarget
+    | WindowCaptureTarget;
   ffmpegPath?: string;
 };
 

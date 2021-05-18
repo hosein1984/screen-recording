@@ -17,10 +17,10 @@ import {
   MIX_AUDIO_SOURCES_FILTER,
 } from '../commons/filters';
 import { applyPreset, defaultPreset, libx264Preset } from '../commons/presets';
-import { AudioDevice, DisplayInfo, LinuxRecordScreenOptions } from './types';
+import { AudioDevice, Display } from './types';
 import { handleFfmpegEvents } from '../commons/event-handlers';
 
-async function listDisplays(): Promise<DisplayInfo[]> {
+async function listDisplays(): Promise<Display[]> {
   return new Promise((resolve, reject) => {
     /**
      * xdpyinfo can be used to get the different types of screens, visuals, and X11
@@ -41,9 +41,7 @@ async function listDisplays(): Promise<DisplayInfo[]> {
   });
 }
 
-async function addMonitorInfosToDisplays(
-  displays: DisplayInfo[]
-): Promise<void> {
+async function addMonitorInfosToDisplays(displays: Display[]): Promise<void> {
   return new Promise((resolve, reject) => {
     /**
      * xrandr provides automatic discovery of modes (resolutions,
@@ -75,14 +73,14 @@ async function listAudioDevices(): Promise<AudioDevice[]> {
   });
 }
 
-export async function listDisplayDevices(): Promise<DisplayInfo[]> {
+export async function listDisplayDevices(): Promise<Display[]> {
   const displays = await listDisplays();
   await addMonitorInfosToDisplays(displays);
   return displays;
 }
 
 export async function recordScreen(
-  options: LinuxRecordScreenOptions,
+  options: RecordScreenOptions,
   callbacks: FfmpegCommandCallbacks
 ): Promise<void> {
   const {
@@ -94,6 +92,14 @@ export async function recordScreen(
 
   const displays = await listDisplayDevices();
   const audioDevices = await listAudioDevices();
+
+  // For now we just use the first display and its first screen. That makes the API more lean
+  const defaultDisplay = displays[0];
+  const defaultDisplayId = defaultDisplay.id;
+  const defaultScreenId = defaultDisplay.defaultScreenId;
+  const defaultScreen = defaultDisplay.screens.find(
+    (s) => s.id === defaultScreenId
+  )!;
 
   const monitorAudioDevice =
     audioDevices.find((d) => d.isMonitor && d.io === DeviceIOType.OUTPUT)
@@ -110,61 +116,53 @@ export async function recordScreen(
 
   const resultPromise = handleFfmpegEvents(command, callbacks);
 
-  // Set screen recorder input
-  // ffmpegCommand.input(`video=${screenCaptureRecorder}`).inputFormat('dshow');
-
   switch (captureTarget.type) {
     case CaptureTargetType.ENTIRE_DISPLAY: {
-      // Done
-      const firstDisplay = displays[displays.length - 1];
-      const displayId = firstDisplay.id;
-      const screenId = firstDisplay.defaultScreen;
-      const defaultScreen = firstDisplay.screens.find(
-        (s) => s.id === screenId
-      )!;
-
-      const primaryMonitor = defaultScreen.monitors.find((m) => m.isPrimary)!;
-      const screenOffsetX = primaryMonitor.x;
-      const screenOffsetY = primaryMonitor.y;
-
       command
-        .input(`:${displayId}.${screenId}+${screenOffsetX},${screenOffsetY}`)
+        .input(`${defaultDisplayId}.${defaultScreenId}+${0},${0}`)
         .withInputOption(
           `-video_size ${defaultScreen.width}x${defaultScreen.height}`
         );
       break;
     }
     case CaptureTargetType.AREA: {
-      const { displayId, screenId, height, width, x, y } = captureTarget;
+      const { height, width, x, y } = captureTarget;
       command
-        .input(`:${displayId}.${screenId}+${x},${y}`)
+        .input(`${defaultDisplayId}.${defaultScreenId}+${x},${y}`)
         .withInputOption(`-video_size ${width}x${height}`);
+      break;
     }
-    // case CaptureTargetType.WINDOW: //
-    //   command.input(`title=${captureTarget.windowName}`);
-    //   break;
+    case CaptureTargetType.WINDOW: {
+      throw new Error('Window capture target is not supported on Linux');
+      break;
+    }
   }
 
   command.inputFormat('x11grab');
   applyPreset(command, libx264Preset);
 
   // Using default pulse source
-  // ffmpegCommand.input(`default`).inputFormat('pulse').withOption('-ac 2');
+  // command.input(`default`).inputFormat('pulse').withOption('-ac 2');
 
-  if (captureDesktopAudio) {
-    command.input(monitorAudioDevice).inputFormat('pulse').withOption('-ac 2');
-  }
+  // Using the following two caused non-monotonous results for me but the default worked fine.
+  // TODO: Need another linux device to test these more
+  // if (captureDesktopAudio) {
+  //   command
+  //     .input(monitorAudioDevice)
+  //     .inputFormat('pulse')
+  //     .withInputOption('-ac 2');
+  // }
 
-  if (captureMicrophoneAudio) {
-    command.input(microphoneDevice).inputFormat('pulse').withOption('-ac 2');
-  }
+  // if (captureMicrophoneAudio) {
+  //   command.input(microphoneDevice).inputFormat('pulse').withOption('-ac 2');
+  // }
 
-  command.complexFilter([
-    LIBX64_SIZE_FILTER,
-    ...(isRecordingDesktopAudio && isRecordingMicrophoneAudio
-      ? [MIX_AUDIO_SOURCES_FILTER]
-      : []),
-  ]);
+  // command.complexFilter([
+  //   LIBX64_SIZE_FILTER,
+  //   ...(isRecordingDesktopAudio && isRecordingMicrophoneAudio
+  //     ? [MIX_AUDIO_SOURCES_FILTER]
+  //     : []),
+  // ]);
 
   command.save(filePath);
 

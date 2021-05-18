@@ -8,8 +8,6 @@ import {
 } from './commons/types';
 import * as win32Commands from './win32/commands';
 import * as linuxCommands from './linux/commands';
-import { LinuxRecordScreenOptions } from './linux/types';
-import { Win32RecordScreenOptions } from './win32/types';
 
 function getFfmpegPath() {
   const basePath = remote.app.getAppPath();
@@ -28,7 +26,7 @@ function initializeFfmpeg() {
 }
 
 export async function recordScreen(
-  options: LinuxRecordScreenOptions | Win32RecordScreenOptions,
+  options: RecordScreenOptions,
   callbacks: FfmpegCommandCallbacks
 ) {
   const platform = process.platform;
