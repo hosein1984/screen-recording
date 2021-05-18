@@ -1,5 +1,6 @@
-import { DeviceInfo, DeviceType } from '../commons/types';
+import { DeviceType } from '../commons/types';
 import { DEFAULT_DEVICE_INFO } from '../win32/constants';
+import { DeviceInfo } from '../win32/types';
 
 // TODO: Complete the patterns
 const DEVICE_INFO_PREFIX_PATTERN = /^\[AVFoundation/;

@@ -7,7 +7,7 @@ import {
   RecordScreenOptions,
 } from '../commons/types';
 import ffmpeg from 'fluent-ffmpeg';
-import { DirectShowDevices } from './types';
+import { DirectShowDevices, Win32RecordScreenOptions } from './types';
 import {
   LIBX64_SIZE_FILTER,
   MIX_AUDIO_SOURCES_FILTER,
@@ -22,7 +22,7 @@ export function listDirectShowDevices(
     const result = exec(
       `${ffmpegPath} -f dshow -list_devices true -i ""`,
       (error, stdout, stderr) => {
-        console.log('Stderr', stderr);
+        // Note: This command outputs are written to stderr and the following use of stderr is intentional
         resolve(parseDirectShowDevices(stderr));
       }
     );
@@ -30,7 +30,7 @@ export function listDirectShowDevices(
 }
 
 export async function recordScreen(
-  options: RecordScreenOptions,
+  options: Win32RecordScreenOptions,
   callbacks: FfmpegCommandCallbacks
 ): Promise<void> {
   const {
@@ -74,23 +74,24 @@ export async function recordScreen(
 
   switch (captureTarget.type) {
     case CaptureTargetType.ENTIRE_DISPLAY:
-      command.input('desktop');
+      command.input('desktop').inputFormat('gdigrab');
       break;
-    case CaptureTargetType.SCREEN:
+    case CaptureTargetType.AREA:
       command
         .input('desktop')
-        .withOption(`-offset_x ${captureTarget.x}`)
-        .withOption(`-offset_y ${captureTarget.y}`)
-        .withOption(
+        .inputFormat('gdigrab')
+        .withInputOption(`-offset_x ${captureTarget.x}`)
+        .withInputOption(`-offset_y ${captureTarget.y}`)
+        .withInputOption(
           `-video_size ${captureTarget.width}x${captureTarget.height}`
         );
       break;
     case CaptureTargetType.WINDOW:
-      command.input(`title=${captureTarget.windowName}`);
+      command.input(`title=${captureTarget.windowName}`).inputFormat('gdigrab');
       break;
   }
 
-  command.inputFormat('gdigrab');
+  // command.inputFormat('gdigrab');
   applyPreset(command, libx264Preset);
 
   if (isRecordingDesktopAudio) {

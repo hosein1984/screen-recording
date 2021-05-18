@@ -8,7 +8,7 @@ export function applyPreset(command: FfmpegCommand, presetFunc: PresetFunc) {
 
 export const libx264Preset: PresetFunc = (command) => {
   command
-    .addOption('-framerate 30')
+    .addInputOption('-framerate 30')
     .videoCodec('libx264')
     .addOption('-pix_fmt yuv420p') // -pix_fmt yuv420p required otherwise can't stream in Chrome
     .addOption('-crf 28') // 0 is lossless and 51 if the worst. Sane range is 17-28

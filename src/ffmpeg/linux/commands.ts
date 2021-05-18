@@ -17,7 +17,7 @@ import {
   MIX_AUDIO_SOURCES_FILTER,
 } from '../commons/filters';
 import { applyPreset, defaultPreset, libx264Preset } from '../commons/presets';
-import { AudioDevice, DisplayInfo } from './types';
+import { AudioDevice, DisplayInfo, LinuxRecordScreenOptions } from './types';
 import { handleFfmpegEvents } from '../commons/event-handlers';
 
 async function listDisplays(): Promise<DisplayInfo[]> {
@@ -82,7 +82,7 @@ export async function listDisplayDevices(): Promise<DisplayInfo[]> {
 }
 
 export async function recordScreen(
-  options: RecordScreenOptions,
+  options: LinuxRecordScreenOptions,
   callbacks: FfmpegCommandCallbacks
 ): Promise<void> {
   const {
@@ -129,27 +129,17 @@ export async function recordScreen(
 
       command
         .input(`:${displayId}.${screenId}+${screenOffsetX},${screenOffsetY}`)
-        .withOption(
+        .withInputOption(
           `-video_size ${defaultScreen.width}x${defaultScreen.height}`
         );
       break;
     }
-    // case CaptureTargetType.SCREEN:
-    //   command
-    //     .input('desktop')
-    //     .withOption(`-offset_x ${captureTarget.x}`)
-    //     .withOption(`-offset_y ${captureTarget.y}`)
-    //     .withOption(
-    //       `-video_size ${captureTarget.width}x${captureTarget.height}`
-    //     );
-    //   break;
-    // case CaptureTargetType.AREA: {
-    //   command
-    //     .input(`:${displayId}.${screenId}+${screenOffsetX},${screenOffsetY}`)
-    //     .withOption(
-    //       `-video_size ${defaultScreen.width}x${defaultScreen.height}`
-    //   );
-    // }
+    case CaptureTargetType.AREA: {
+      const { displayId, screenId, height, width, x, y } = captureTarget;
+      command
+        .input(`:${displayId}.${screenId}+${x},${y}`)
+        .withInputOption(`-video_size ${width}x${height}`);
+    }
     // case CaptureTargetType.WINDOW: //
     //   command.input(`title=${captureTarget.windowName}`);
     //   break;

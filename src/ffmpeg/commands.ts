@@ -1,9 +1,15 @@
 import { remote } from 'electron';
 import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
-import { FfmpegCommandCallbacks, RecordScreenOptions } from './commons/types';
+import {
+  FfmpegCommandCallbacks,
+  RecordScreenOptions,
+  Platform,
+} from './commons/types';
 import * as win32Commands from './win32/commands';
 import * as linuxCommands from './linux/commands';
+import { LinuxRecordScreenOptions } from './linux/types';
+import { Win32RecordScreenOptions } from './win32/types';
 
 function getFfmpegPath() {
   const basePath = remote.app.getAppPath();
@@ -22,17 +28,17 @@ function initializeFfmpeg() {
 }
 
 export async function recordScreen(
-  options: RecordScreenOptions,
+  options: LinuxRecordScreenOptions | Win32RecordScreenOptions,
   callbacks: FfmpegCommandCallbacks
 ) {
   const platform = process.platform;
 
   options.ffmpegPath = options.ffmpegPath || getFfmpegPath();
 
-  switch (platform) {
-    case 'win32':
+  switch (options.platform) {
+    case Platform.WIN32:
       return win32Commands.recordScreen(options, callbacks);
-    case 'linux':
+    case Platform.LINUX:
       return linuxCommands.recordScreen(options, callbacks);
     default:
       console.log(

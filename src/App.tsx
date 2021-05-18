@@ -11,13 +11,16 @@ const browserWindow = remote.BrowserWindow.getAllWindows()[0];
 const App = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  const startRecording = () => {};
+
+  const stopRecording = () => {};
+
   useEffect(() => {
     test();
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
-
     return () => clearInterval(interval);
   });
 
@@ -25,6 +28,15 @@ const App = () => {
     <div>
       <h1>Hello World</h1>
       <h3 style={{ color: 'white' }}>Current Time {currentTime.toString()}</h3>
+      <div
+        onClick={startRecording}
+        style={{ color: 'green', cursor: 'pointer' }}
+      >
+        Start Recording
+      </div>
+      <div onClick={stopRecording} style={{ color: 'blue', cursor: 'pointer' }}>
+        StopRecording
+      </div>
     </div>
   );
 };

@@ -12,9 +12,14 @@ export enum DeviceIOType {
   OUTPUT = 'output',
 }
 
+export enum Platform {
+  WIN32 = 'win32',
+  LINUX = 'linux',
+  MAC = 'mac',
+}
+
 export enum CaptureTargetType {
   ENTIRE_DISPLAY = 'entireDisplay',
-  SCREEN = 'screen',
   AREA = 'area',
   WINDOW = 'window',
 }
@@ -25,14 +30,6 @@ export type CaptureTarget = {
 
 export type EntireScreenCaptureTarget = {
   type: CaptureTargetType.ENTIRE_DISPLAY;
-} & CaptureTarget;
-
-export type ScreenCaptureTarget = {
-  type: CaptureTargetType.SCREEN;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
 } & CaptureTarget;
 
 export type AreaCaptureTarget = {
@@ -48,17 +45,14 @@ export type WindowCaptureTarget = {
   windowName: string;
 } & CaptureTarget;
 
-export interface RecordScreenOptions {
+export type RecordScreenOptions = {
+  platform: Platform;
   captureDesktopAudio: boolean;
   captureMicrophoneAudio: boolean;
   filePath: string;
-  captureTarget:
-    | EntireScreenCaptureTarget
-    | ScreenCaptureTarget
-    | AreaCaptureTarget
-    | WindowCaptureTarget;
+  captureTarget: CaptureTarget;
   ffmpegPath?: string;
-}
+};
 
 export interface FfmpegCommandCallbacks {
   onStart?: (ffmpegCommand: string, stop: () => void) => void;

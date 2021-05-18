@@ -1,4 +1,10 @@
-import { DeviceIOType } from '../commons/types';
+import {
+  AreaCaptureTarget,
+  Platform,
+  DeviceIOType,
+  EntireScreenCaptureTarget,
+  RecordScreenOptions,
+} from '../commons/types';
 
 export type Monitor = {
   name: string;
@@ -30,3 +36,21 @@ export type AudioDevice = {
   isDefault: boolean;
   isMonitor: boolean;
 };
+
+export type LinuxEntireScreenCaptureTarget = {
+  displayId: number;
+} & EntireScreenCaptureTarget;
+
+export type LinuxAreaCaptureTarget = {
+  displayId: number;
+  screenId: number;
+} & AreaCaptureTarget;
+
+export type LinuxCaptureTargets =
+  | LinuxEntireScreenCaptureTarget
+  | LinuxAreaCaptureTarget;
+
+export type LinuxRecordScreenOptions = {
+  platform: Platform.LINUX;
+  captureTarget: LinuxCaptureTargets;
+} & RecordScreenOptions;
