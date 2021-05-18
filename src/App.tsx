@@ -1,20 +1,32 @@
-import React from 'react'
-import { render } from 'react-dom'
-import { GlobalStyle } from './styles/GlobalStyle'
+import React, { useEffect, useRef, useState } from 'react';
+import { render } from 'react-dom';
+import { test } from './screen-recoder/screen-recorder';
+import { BrowserWindow, remote } from 'electron';
+const mainElement = document.createElement('div');
+mainElement.setAttribute('id', 'root');
+document.body.appendChild(mainElement);
 
-import Greetings from './components/Greetings'
-
-const mainElement = document.createElement('div')
-mainElement.setAttribute('id', 'root')
-document.body.appendChild(mainElement)
+const browserWindow = remote.BrowserWindow.getAllWindows()[0];
 
 const App = () => {
-  return (
-    <>
-      <GlobalStyle />
-      <Greetings />
-    </>
-  )
-}
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-render(<App />, mainElement)
+  useEffect(() => {
+    test();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+
+    return () => clearInterval(interval);
+  });
+
+  return (
+    <div>
+      <h1>Hello World</h1>
+      <h3 style={{ color: 'white' }}>Current Time {currentTime.toString()}</h3>
+    </div>
+  );
+};
+
+render(<App />, mainElement);

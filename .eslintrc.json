@@ -19,13 +19,16 @@
     "ecmaVersion": 11,
     "sourceType": "module"
   },
-  "plugins": [
-    "react",
-    "prettier",
-    "@typescript-eslint"
-  ],
+  "plugins": ["react", "prettier", "@typescript-eslint"],
   "rules": {
+    "semi": "off",
+    "comma-dangle": "off",
     "react/prop-types": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "space-before-function-paren": "off",
+    "eqeqeq": "off",
+    "no-unused-expressions": "off",
+    "no-undef-init": "off",
     "import/extensions": [
       "error",
       "ignorePackages",
@@ -37,7 +40,7 @@
   },
   "settings": {
     "import/resolver": {
-      "typescript": {} 
+      "typescript": {}
     }
   }
 }
