@@ -50,4 +50,9 @@ export type AudioDevice = {
   io: DeviceIOType;
   isDefault: boolean;
   isMonitor: boolean;
+  spec: {
+    endian: string;
+    channels: number;
+    sampleRate: number;
+  };
 };
