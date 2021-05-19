@@ -9,16 +9,16 @@ import {
 import ffmpeg from 'fluent-ffmpeg';
 import { DirectShowDevices } from './types';
 import {
-  LIBX64_SIZE_FILTER,
-  MIX_AUDIO_SOURCES_FILTER,
-} from '../commons/filters';
-import {
   applyPreset,
   commonVideoPreset,
   defaultPreset,
   libx264Preset,
 } from '../commons/presets';
 import { handleFfmpegEvents } from '../commons/event-handlers';
+import {
+  LIBX64_SIZE_FILTER,
+  MIX_AUDIO_SOURCES_FILTER,
+} from '../commons/filters';
 
 export function listDirectShowDevices(
   ffmpegPath: string
