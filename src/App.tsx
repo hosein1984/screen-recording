@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { render } from 'react-dom';
-import { test } from './screen-recoder/screen-recorder';
+import { test } from './screen-recoder/screen-recorder-tests';
 import { BrowserWindow, remote } from 'electron';
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');

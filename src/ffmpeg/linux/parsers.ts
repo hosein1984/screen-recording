@@ -167,11 +167,14 @@ export function parseXrandrOutput(input: string, displays: Display[]): void {
 export function parsePacmdOutput(input: string): AudioDevice[] {
   const DEVICE_INDEX_PATTERN = /^\s+(\*)?\sindex:\s([0-9]+)/;
   const DEVICE_NAME_PATTERN = /^\s+name:\s<(.*)>/;
+  const DEVICE_SAMPLE_SPEC_PATTERN = /^\s+sample\sspec:\s(.*)/;
 
   const isDeviceIndexLine = (line: string) =>
     line.search(DEVICE_INDEX_PATTERN) > -1;
   const isDeviceNameLine = (line: string) =>
     line.search(DEVICE_NAME_PATTERN) > -1;
+  const isDeviceSampleSpecLine = (line: string) =>
+    line.search(DEVICE_SAMPLE_SPEC_PATTERN) > -1;
 
   const devices: AudioDevice[] = [];
 
@@ -188,6 +191,11 @@ export function parsePacmdOutput(input: string): AudioDevice[] {
           name: '',
           io: DeviceIOType.UNKNOWN,
           isMonitor: false,
+          spec: {
+            channels: '1ch',
+            endian: '',
+            sampleRate: 48000,
+          },
         });
       }
 
@@ -209,6 +217,23 @@ export function parsePacmdOutput(input: string): AudioDevice[] {
           ? DeviceIOType.OUTPUT
           : DeviceIOType.UNKNOWN;
         lastDevice.isMonitor = deviceName.includes('monitor');
+      }
+
+      continue;
+    }
+
+    if (isDeviceSampleSpecLine(line) && devices.length > 0) {
+      const lastDevice = devices[devices.length - 1];
+
+      const matchResults = line.match(DEVICE_SAMPLE_SPEC_PATTERN);
+
+      if (matchResults) {
+        const [, specs] = matchResults;
+        const [endian, channels, sampleRate] = specs.split(/\s+/);
+
+        lastDevice.spec.endian = endian;
+        lastDevice.spec.channels = +channels.replace(/[^0-9]/g, '');
+        lastDevice.spec.sampleRate = +sampleRate.replace(/[^0-9]/g, '');
       }
 
       continue;

@@ -16,7 +16,13 @@ import {
   LIBX64_SIZE_FILTER,
   MIX_AUDIO_SOURCES_FILTER,
 } from '../commons/filters';
-import { applyPreset, defaultPreset, libx264Preset } from '../commons/presets';
+import {
+  applyPreset,
+  commonAudioPreset,
+  commonVideoPreset,
+  defaultPreset,
+  libx264Preset,
+} from '../commons/presets';
 import { AudioDevice, Display } from './types';
 import { handleFfmpegEvents } from '../commons/event-handlers';
 
@@ -101,14 +107,17 @@ export async function recordScreen(
     (s) => s.id === defaultScreenId
   )!;
 
-  const monitorAudioDevice =
-    audioDevices.find((d) => d.isMonitor && d.io === DeviceIOType.OUTPUT)
-      ?.name || '';
-  const microphoneDevice =
-    audioDevices.find((d) => d.io === DeviceIOType.INPUT)?.name || '';
+  const monitorAudioDevice = audioDevices.find(
+    (d) => d.isMonitor && d.io === DeviceIOType.OUTPUT
+  );
+  const microphoneDevice = audioDevices.find(
+    (d) => d.io === DeviceIOType.INPUT
+  );
 
-  const isRecordingDesktopAudio = captureDesktopAudio && monitorAudioDevice;
-  const isRecordingMicrophoneAudio = captureMicrophoneAudio && microphoneDevice;
+  const isRecordingDesktopAudio =
+    captureDesktopAudio && Boolean(monitorAudioDevice);
+  const isRecordingMicrophoneAudio =
+    captureMicrophoneAudio && Boolean(microphoneDevice);
 
   const command: FfmpegCommandExt = ffmpeg({});
 
@@ -134,35 +143,48 @@ export async function recordScreen(
     }
     case CaptureTargetType.WINDOW: {
       throw new Error('Window capture target is not supported on Linux');
-      break;
     }
   }
 
   command.inputFormat('x11grab');
   applyPreset(command, libx264Preset);
+  applyPreset(command, commonVideoPreset);
 
   // Using default pulse source
   // command.input(`default`).inputFormat('pulse').withOption('-ac 2');
+  // applyPreset(command, commonAudioPreset);
 
   // Using the following two caused non-monotonous results for me but the default worked fine.
   // TODO: Need another linux device to test these more
-  // if (captureDesktopAudio) {
-  //   command
-  //     .input(monitorAudioDevice)
-  //     .inputFormat('pulse')
-  //     .withInputOption('-ac 2');
-  // }
+  if (isRecordingDesktopAudio && monitorAudioDevice) {
+    command
+      .input(monitorAudioDevice.name)
+      .inputFormat('pulse')
+      .withInputOption(`-channels ${monitorAudioDevice.spec.channels}`)
+      .withInputOption(`-sample_rate ${monitorAudioDevice.spec.sampleRate}`);
+    applyPreset(command, commonAudioPreset);
+  }
 
-  // if (captureMicrophoneAudio) {
-  //   command.input(microphoneDevice).inputFormat('pulse').withOption('-ac 2');
-  // }
+  if (captureMicrophoneAudio && microphoneDevice) {
+    command
+      .input(microphoneDevice.name)
+      .inputFormat('pulse')
+      .withInputOption(`-channels ${microphoneDevice.spec.channels}`)
+      .withInputOption(`-sample_rate ${microphoneDevice.spec.sampleRate}`);
+    applyPreset(command, commonAudioPreset);
+  }
 
-  // command.complexFilter([
-  //   LIBX64_SIZE_FILTER,
-  //   ...(isRecordingDesktopAudio && isRecordingMicrophoneAudio
-  //     ? [MIX_AUDIO_SOURCES_FILTER]
-  //     : []),
-  // ]);
+  if (captureDesktopAudio || captureMicrophoneAudio) {
+    // command.withOption('-c:a libmp3lame').withOption('-b:a 32k');
+    command.withOption('-ac 2');
+  }
+
+  command.complexFilter([
+    LIBX64_SIZE_FILTER,
+    ...(isRecordingDesktopAudio && isRecordingMicrophoneAudio
+      ? [MIX_AUDIO_SOURCES_FILTER]
+      : []),
+  ]);
 
   command.save(filePath);
 
