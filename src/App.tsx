@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { render } from 'react-dom';
 import { test } from './screen-recoder/screen-recorder';
 import { BrowserWindow, remote } from 'electron';
+import { capture_and_convert } from './script';
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');
 document.body.appendChild(mainElement);
@@ -16,7 +17,8 @@ const App = () => {
   const stopRecording = () => {};
 
   useEffect(() => {
-    test();
+    // test();
+    capture_and_convert();
   }, []);
 
   useEffect(() => {
