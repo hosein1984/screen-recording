@@ -15,7 +15,7 @@ export enum DeviceIOType {
 export enum Platform {
   WIN32 = 'win32',
   LINUX = 'linux',
-  MAC = 'mac',
+  MAC = 'darwin',
 }
 
 export enum CaptureTargetType {
@@ -46,7 +46,7 @@ export type WindowCaptureTarget = {
 } & CaptureTarget;
 
 export type RecordScreenOptions = {
-  platform: Platform;
+  platform: NodeJS.Platform;
   captureDesktopAudio: boolean;
   captureMicrophoneAudio: boolean;
   filePath: string;

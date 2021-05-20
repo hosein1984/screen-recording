@@ -6,13 +6,23 @@ import {
   RecordScreenOptions,
   Platform,
 } from './commons/types';
+import is from 'electron-is';
 import * as win32Commands from './win32/commands';
 import * as linuxCommands from './linux/commands';
 
 function getFfmpegPath() {
-  const basePath = remote.app.getAppPath();
+  let basePath = '';
+
+  if (is.dev()) {
+    basePath = remote.app.getAppPath();
+  } else {
+    basePath = path.resolve(remote.app.getAppPath(), '..');
+  }
+
+  console.log('Base path is: ', basePath);
 
   const platform = process.platform;
+
   const isWindows = platform === 'win32';
 
   return path.resolve(
