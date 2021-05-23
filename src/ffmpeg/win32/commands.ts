@@ -10,6 +10,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import { DirectShowDevices } from './types';
 import {
   applyPreset,
+  commonAudioPreset,
   commonVideoPreset,
   defaultPreset,
   libx264Preset,
@@ -105,12 +106,12 @@ export async function recordScreen(
       .input(`audio=${virtualAudioRecorder}`)
       .inputFormat('dshow')
       .withOption('-strict -2');
-    applyPreset(command, commonVideoPreset);
+    applyPreset(command, commonAudioPreset);
   }
 
   if (isRecordingMicrophoneAudio) {
     command.input(`audio=${microphone}`).inputFormat('dshow');
-    applyPreset(command, commonVideoPreset);
+    applyPreset(command, commonAudioPreset);
   }
 
   command.complexFilter([

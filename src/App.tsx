@@ -4,6 +4,7 @@ import { remote } from 'electron';
 import { ScreenRecorder } from './screen-recoder/screen-recorder';
 import { RecorderState } from './screen-recoder/types';
 import { useBeforeunload } from 'react-beforeunload';
+import { capture_and_convert } from './script';
 
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');

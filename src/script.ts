@@ -1,85 +1,53 @@
+import { remote } from 'electron';
 import { Decoder, Encoder, tools, Reader } from 'ts-ebml';
 
+const MEDIA_ACQUISITION_TIME_OUT = 2000;
+
 export async function capture_and_convert() {
-  //   const params = new URLSearchParams(location.search);
-
-  let recorder = true;
-  let duration = 60 * 5;
+  let duration = 60 * 0.5;
   let codec = 'vp8';
-
-  //   if (params.has('type') && params.get('type') == 'recorder') recorder = true;
-
-  //   if (params.has('duration'))
-  //     duration = parseInt(params.get('duration') || '60');
-
-  //   if (params.has('codec')) codec = params.get('codec') || 'vp8';
-
-  //   if (recorder) await main_from_recorder(duration, codec);
-  //   else {
-  //     const file = params.has('file')
-  //       ? (params.get('file') as string)
-  //       : './chrome57.webm';
-  //     await main_from_file(file);
-  //   }
 
   await main_from_recorder(duration, codec);
 }
 
-async function main_from_file(file: string) {
-  const decoder = new Decoder();
-  const reader = new Reader();
-  reader.logging = true;
-  reader.logGroup = 'Raw WebM file';
-  reader.drop_default_duration = false;
-  const webMBuf = await fetch(file).then((res) => res.arrayBuffer());
-  const elms = decoder.decode(webMBuf);
-  elms.forEach((elm) => {
-    reader.read(elm);
-  });
-  reader.stop();
-  const refinedMetadataBuf = tools.makeMetadataSeekable(
-    reader.metadatas,
-    reader.duration,
-    reader.cues
+async function getAdvancedStream() {
+  const browserWindow = remote.getCurrentWindow();
+  const windowMediaSourceId = browserWindow.getMediaSourceId();
+  const windowVideoStream = await getWindowVideoStream(windowMediaSourceId);
+  const speakerAudioStream = await getSpeakerAudioStream(windowMediaSourceId);
+  const microphoneAudioStream = await getMicrophoneAudioStream();
+  const mixedAudioStream = getMixedAudioStream(
+    speakerAudioStream,
+    microphoneAudioStream
   );
-  const body = webMBuf.slice(reader.metadataSize);
-  const refinedWebM = new Blob([refinedMetadataBuf, body], {
-    type: 'video/webm',
-  });
-  const refined_video = document.createElement('video');
-  refined_video.src = URL.createObjectURL(refinedWebM);
-  refined_video.controls = true;
-  document.body.appendChild(refined_video);
+  const stream = getMixedVideoAndAudioStream(
+    windowVideoStream,
+    mixedAudioStream
+  )!;
 
-  // Log the refined WebM file structure.
-  const refinedDecoder = new Decoder();
-  const refinedReader = new Reader();
-  refinedReader.logging = true;
-  refinedReader.logGroup = 'Refined WebM file';
-  const refinedBuf = await readAsArrayBuffer(refinedWebM);
-  const refinedElms = refinedDecoder.decode(refinedBuf);
-  refinedElms.forEach((elm) => {
-    refinedReader.read(elm);
-  });
-  refinedReader.stop();
+  return stream;
 }
 
-async function main_from_recorder(duration: number, codec: string) {
-  const decoder = new Decoder();
-  const reader = new Reader();
-  reader.logging = true;
-  reader.logGroup = 'Raw WebM Stream (not seekable)';
-
-  let tasks: Promise<void> = Promise.resolve(void 0);
-  let webM = new Blob([], { type: 'video/webm' });
-
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  console.table(devices);
-
+async function getBaseStream() {
   const stream: MediaStream = await navigator.mediaDevices.getUserMedia({
     video: true,
     audio: true,
   });
+
+  return stream;
+}
+
+async function main_from_recorder(duration: number, codec: string) {
+  // const decoder = new Decoder();
+  // const reader = new Reader();
+  // reader.logging = true;
+  // reader.logGroup = 'Raw WebM Stream (not seekable)';
+
+  let tasks: Promise<void> = Promise.resolve(void 0);
+  let webM = new Blob([], { type: 'video/webm' });
+
+  const stream = await getAdvancedStream();
+  // const stream = await getBaseStream();
 
   const rec = new MediaRecorder(stream, {
     mimeType: `video/webm; codecs="${codec}, opus"`,
@@ -88,14 +56,14 @@ async function main_from_recorder(duration: number, codec: string) {
   const ondataavailable = (ev: BlobEvent) => {
     const chunk = ev.data;
     webM = new Blob([webM, chunk], { type: chunk.type });
-    const task = async () => {
-      const buf = await readAsArrayBuffer(chunk);
-      const elms = decoder.decode(buf);
-      elms.forEach((elm) => {
-        reader.read(elm);
-      });
-    };
-    tasks = tasks.then(() => task());
+    // const task = async () => {
+    //   const buf = await readAsArrayBuffer(chunk);
+    //   const elms = decoder.decode(buf);
+    //   elms.forEach((elm) => {
+    //     reader.read(elm);
+    //   });
+    // };
+    // tasks = tasks.then(() => task());
   };
 
   rec.addEventListener('dataavailable', ondataavailable);
@@ -126,7 +94,7 @@ async function main_from_recorder(duration: number, codec: string) {
   });
 
   await tasks; // wait data processing
-  reader.stop();
+  // reader.stop();
 
   console.log('Recording has officially finished at: ', new Date());
 
@@ -143,58 +111,58 @@ async function main_from_recorder(duration: number, codec: string) {
   document.body.appendChild(document.createElement('br'));
   document.body.appendChild(rawVideoButton);
 
-  const infos = [
-    //{duration: reader.duration, title: "add duration only (seekable but slow)"},
-    //{cues: reader.cues, title: "add cues only (seekable file)"},
-    {
-      duration: reader.duration,
-      cues: reader.cues,
-      title: 'Refined WebM stream (seekable)',
-    },
-  ];
+  // const infos = [
+  //   //{duration: reader.duration, title: "add duration only (seekable but slow)"},
+  //   //{cues: reader.cues, title: "add cues only (seekable file)"},
+  //   {
+  //     duration: reader.duration,
+  //     cues: reader.cues,
+  //     title: 'Refined WebM stream (seekable)',
+  //   },
+  // ];
 
-  console.log('Starting the refining process at: ', new Date());
-  for (const info of infos) {
-    const refinedMetadataBuf = tools.makeMetadataSeekable(
-      reader.metadatas,
-      reader.duration,
-      reader.cues
-    );
-    console.log('Refining the buffers started at: ', new Date());
-    const webMBuf = await readAsArrayBuffer(webM);
-    const body = webMBuf.slice(reader.metadataSize);
-    const refinedWebM = new Blob([refinedMetadataBuf, body], {
-      type: webM.type,
-    });
+  // console.log('Starting the refining process at: ', new Date());
+  // for (const info of infos) {
+  //   const refinedMetadataBuf = tools.makeMetadataSeekable(
+  //     reader.metadatas,
+  //     reader.duration,
+  //     reader.cues
+  //   );
+  //   console.log('Refining the buffers started at: ', new Date());
+  //   const webMBuf = await readAsArrayBuffer(webM);
+  //   const body = webMBuf.slice(reader.metadataSize);
+  //   const refinedWebM = new Blob([refinedMetadataBuf, body], {
+  //     type: webM.type,
+  //   });
 
-    // logging
-    console.log(
-      'Converting the refined buffer to array buffer at: ',
-      new Date()
-    );
-    const refinedBuf = await readAsArrayBuffer(refinedWebM);
-    const _reader = new Reader();
-    _reader.logging = true;
-    _reader.logGroup = info.title;
-    console.log('Decoding the refined array buffer at: ', new Date());
-    new Decoder().decode(refinedBuf).forEach((elm) => _reader.read(elm));
-    _reader.stop();
+  //   // logging
+  //   console.log(
+  //     'Converting the refined buffer to array buffer at: ',
+  //     new Date()
+  //   );
+  //   const refinedBuf = await readAsArrayBuffer(refinedWebM);
+  //   const _reader = new Reader();
+  //   _reader.logging = true;
+  //   _reader.logGroup = info.title;
+  //   console.log('Decoding the refined array buffer at: ', new Date());
+  //   new Decoder().decode(refinedBuf).forEach((elm) => _reader.read(elm));
+  //   _reader.stop();
 
-    console.log('Creating the view elements at: ', new Date());
-    const refined_video = document.createElement('video');
-    refined_video.src = URL.createObjectURL(refinedWebM);
-    refined_video.controls = true;
-    const refinedVideoButton = document.createElement('button');
-    refinedVideoButton.textContent = 'Download Refined Video';
-    refinedVideoButton.addEventListener('click', () => {
-      saveData(refinedWebM, 'refined.webm');
-    });
-    put(refined_video, info.title);
-    document.body.appendChild(document.createElement('br'));
-    document.body.appendChild(refinedVideoButton);
-  }
+  //   console.log('Creating the view elements at: ', new Date());
+  //   const refined_video = document.createElement('video');
+  //   refined_video.src = URL.createObjectURL(refinedWebM);
+  //   refined_video.controls = true;
+  //   const refinedVideoButton = document.createElement('button');
+  //   refinedVideoButton.textContent = 'Download Refined Video';
+  //   refinedVideoButton.addEventListener('click', () => {
+  //     saveData(refinedWebM, 'refined.webm');
+  //   });
+  //   put(refined_video, info.title);
+  //   document.body.appendChild(document.createElement('br'));
+  //   document.body.appendChild(refinedVideoButton);
+  // }
 
-  console.log('Finished the refining process at: ', new Date());
+  // console.log('Finished the refining process at: ', new Date());
 }
 
 function put(elm: HTMLElement, title: string): void {
@@ -276,3 +244,144 @@ var saveData = (function () {
 //   ): void;
 //   requestData(): Blob;
 // }
+
+async function getWindowVideoStream(windowMediaSourceId: string) {
+  // The reason that I didn't use MediaStreamConstraints here is that the "mandatory" property is
+  // Chrome specific and thus does not exist on the typescript type definition.
+  // Please refer to: https://github.com/microsoft/TypeScript/issues/22897#issuecomment-379207368
+  const constraints: any = {
+    audio: false,
+    video: {
+      mandatory: {
+        chromeMediaSource: 'desktop',
+        // chromeMediaSourceId: windowMediaSourceId,
+      },
+    },
+  };
+  return await getMediaStream('Window Video', constraints);
+}
+
+async function getSpeakerAudioStream(windowMediaSourceId: string) {
+  // The reason that I didn't use MediaStreamConstraints here is that the "mandatory" property is
+  // Chrome specific and thus does not exist on the typescript type definition.
+  // Please refer to: https://github.com/microsoft/TypeScript/issues/22897#issuecomment-379207368
+  const constraints: any = {
+    audio: {
+      mandatory: {
+        chromeMediaSource: 'desktop',
+        chromeMediaSourceId: windowMediaSourceId,
+      },
+    },
+    video: {
+      mandatory: {
+        chromeMediaSource: 'desktop',
+        chromeMediaSourceId: windowMediaSourceId,
+      },
+    },
+  };
+  const stream = await getMediaStream('Speaker Audio', constraints);
+
+  if (stream) {
+    console.log('Removing video track from speaker stream');
+    const videoTrack = stream.getVideoTracks()[0];
+    videoTrack.stop();
+    stream.removeTrack(videoTrack);
+    console.log('Video track removed from speaker stream');
+  }
+
+  return stream;
+}
+async function getMicrophoneAudioStream() {
+  const constraints = {
+    audio: {
+      echoCancellation: true,
+    },
+    video: false,
+  };
+  return await getMediaStream('Microphone Audio', constraints);
+}
+
+function getMixedAudioStream(
+  speakerAudioStream?: MediaStream,
+  microphoneAudioStream?: MediaStream
+) {
+  if (speakerAudioStream && microphoneAudioStream) {
+    const audioContext = new AudioContext();
+    const dest = audioContext.createMediaStreamDestination();
+    audioContext.createMediaStreamSource(speakerAudioStream).connect(dest);
+    audioContext.createMediaStreamSource(microphoneAudioStream).connect(dest);
+    return dest.stream;
+  } else if (speakerAudioStream) {
+    return speakerAudioStream;
+  } else if (microphoneAudioStream) {
+    return microphoneAudioStream;
+  } else {
+    return undefined;
+  }
+}
+
+function getMixedVideoAndAudioStream(
+  videoStream?: MediaStream,
+  audioStream?: MediaStream
+) {
+  if (videoStream && audioStream) {
+    const videoTrack = videoStream.getVideoTracks()[0];
+    const audioTrack = audioStream.getAudioTracks()[0];
+    const mixed = new MediaStream();
+    mixed.addTrack(videoTrack);
+    mixed.addTrack(audioTrack);
+    return mixed;
+  } else if (videoStream) {
+    return videoStream;
+  } else if (audioStream) {
+    return audioStream;
+  } else {
+    return undefined;
+  }
+}
+
+async function getMediaStream(
+  mediaName: string,
+  constraints: MediaStreamConstraints
+) {
+  console.log(
+    `Trying to acquire "${mediaName}" media stream with these constraints:\n${JSON.stringify(
+      constraints
+    )}`
+  );
+
+  let stream: MediaStream | undefined = undefined;
+  try {
+    stream = await promiseTimeout(
+      MEDIA_ACQUISITION_TIME_OUT,
+      navigator.mediaDevices.getUserMedia(constraints)
+    );
+    console.log(`"${mediaName}" media stream acquired for recording`);
+  } catch (err) {
+    console.debug(
+      `"${mediaName}" media stream could not be acquired because: ` + err
+    );
+  }
+
+  return stream;
+}
+
+function promiseTimeout<T>(
+  milliseconds: number,
+  promise: Promise<T>,
+  message = 'Timed out'
+) {
+  // Create a promise that rejects in <ms> milliseconds
+  let timerId: ReturnType<typeof setTimeout>;
+  const timeout: Promise<undefined> = new Promise((resolve, reject) => {
+    timerId = setTimeout(() => reject(new Error(message)), milliseconds);
+  });
+  //
+  const clearTimer = () => {
+    if (timerId) {
+      clearTimeout(timerId);
+    }
+  };
+  // Returns a race between our timeout and the passed in promise
+  return Promise.race([promise, timeout]).finally(clearTimer);
+}
