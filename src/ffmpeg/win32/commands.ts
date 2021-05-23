@@ -117,7 +117,12 @@ export async function recordScreen(
   command.complexFilter([
     LIBX64_SIZE_FILTER,
     ...(isRecordingDesktopAudio && isRecordingMicrophoneAudio
-      ? [MIX_AUDIO_SOURCES_FILTER]
+      ? // ? [MIX_AUDIO_SOURCES_FILTER]
+        [
+          '[1:a]volume=1.0,aresample=async=1[a1]',
+          '[2:a]volume=5.0,aresample=async=1[a2]',
+          '[a1][a2]amix',
+        ]
       : []),
   ]);
 
