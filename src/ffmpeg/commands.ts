@@ -9,6 +9,7 @@ import {
 import is from 'electron-is';
 import * as win32Commands from './win32/commands';
 import * as linuxCommands from './linux/commands';
+import * as macCommands from './mac/commands';
 
 function getFfmpegPath() {
   let basePath = '';
@@ -48,6 +49,8 @@ export async function recordScreen(
       return win32Commands.recordScreen(options, callbacks);
     case Platform.LINUX:
       return linuxCommands.recordScreen(options, callbacks);
+    case Platform.MAC:
+      return macCommands.recordScreen(options, callbacks);
     default:
       console.log(
         'Screen recoding is not supported for the platform: ',

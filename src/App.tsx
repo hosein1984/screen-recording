@@ -49,6 +49,17 @@ const App = () => {
     return () => clearInterval(interval);
   });
 
+  useEffect(() => {
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then(function (devices) {
+        console.table(devices);
+      })
+      .catch(function (err) {
+        console.log(err.name + ': ' + err.message);
+      });
+  }, []);
+
   return (
     <div>
       <h1 style={{ color: 'white' }}>Screen Recorder Playground</h1>

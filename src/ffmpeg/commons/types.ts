@@ -135,3 +135,10 @@ export enum FFmpegAMFQuality {
   BALANCED = 1, // balanced
   QUALITY = 2, // Prefer quality
 }
+
+export type DeviceInfo = {
+  id: string;
+  name: string;
+  alternativeName: string;
+  type: DeviceType;
+};

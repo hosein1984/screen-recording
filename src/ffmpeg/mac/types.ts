@@ -1,6 +1,6 @@
 import { DeviceInfo } from '../commons/types';
 
-export type DirectShowDevices = {
+export type AVFoundationDevices = {
   videoDevices: DeviceInfo[];
   audioDevices: DeviceInfo[];
 };

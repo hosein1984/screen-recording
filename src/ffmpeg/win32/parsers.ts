@@ -1,5 +1,5 @@
+import { DEFAULT_DEVICE_INFO } from '../commons/constants';
 import { DeviceType } from '../commons/types';
-import { DEFAULT_DEVICE_INFO } from './constants';
 import { DirectShowDevices } from './types';
 
 export function parseDirectShowDevices(input: string) {

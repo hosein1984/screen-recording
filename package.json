@@ -17,6 +17,7 @@
     "package": "electron-builder",
     "dist:test": "npm-run-all build package:test",
     "dist": "npm-run-all build package",
+    "start": "npm run dev",
     "test": "jest"
   },
   "keywords": [],

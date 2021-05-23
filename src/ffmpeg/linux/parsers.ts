@@ -192,7 +192,7 @@ export function parsePacmdOutput(input: string): AudioDevice[] {
           io: DeviceIOType.UNKNOWN,
           isMonitor: false,
           spec: {
-            channels: '1ch',
+            channels: 1,
             endian: '',
             sampleRate: 48000,
           },
