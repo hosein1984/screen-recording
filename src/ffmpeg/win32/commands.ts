@@ -1,5 +1,3 @@
-import { exec } from 'child_process';
-import { parseDirectShowDevices } from './parsers';
 import {
   CaptureTargetType,
   FfmpegCommandExt,
@@ -7,7 +5,6 @@ import {
   RecordScreenOptions,
 } from '../commons/types';
 import ffmpeg from 'fluent-ffmpeg';
-import { DirectShowDevices } from './types';
 import {
   applyPreset,
   commonAudioPreset,
@@ -16,24 +13,8 @@ import {
   libx264Preset,
 } from '../commons/presets';
 import { handleFfmpegEvents } from '../commons/event-handlers';
-import {
-  LIBX64_SIZE_FILTER,
-  MIX_AUDIO_SOURCES_FILTER,
-} from '../commons/filters';
-
-export function listDirectShowDevices(
-  ffmpegPath: string
-): Promise<DirectShowDevices> {
-  return new Promise((resolve, reject) => {
-    const result = exec(
-      `${ffmpegPath} -f dshow -list_devices true -i ""`,
-      (error, stdout, stderr) => {
-        // Note: This command outputs are written to stderr and the following use of stderr is intentional
-        resolve(parseDirectShowDevices(stderr));
-      }
-    );
-  });
-}
+import { LIBX64_SIZE_FILTER } from '../commons/filters';
+import { DshowDeviceUtils } from './dshow-device-utils';
 
 export async function recordScreen(
   options: RecordScreenOptions,
@@ -53,21 +34,22 @@ export async function recordScreen(
     );
   }
 
-  const devices = await listDirectShowDevices(ffmpegPath);
+  const devices = await DshowDeviceUtils.listDevices(ffmpegPath);
 
-  const screenCaptureRecorder =
-    devices.videoDevices.find((d) => d.name.includes('screen-capture-recorder'))
-      ?.name || '';
-  const virtualAudioRecorder =
-    devices.audioDevices.find((d) => d.name.includes('virtual-audio-capturer'))
-      ?.name || '';
-  const microphone =
-    devices.audioDevices.find((d) =>
-      d.name.toLowerCase().includes('microphone')
-    )?.name || '';
+  const defaultDesktopVideoDevice = await DshowDeviceUtils.getDefaultDesktopVideoDevice(
+    devices.videoDevices
+  );
+  const defaultDesktopAudioDevice = await DshowDeviceUtils.getDefaultDesktopAudioDevice(
+    devices.audioDevices
+  );
+  const defaultInputAudioDevice = await DshowDeviceUtils.getDefaultInputAudioDevice(
+    devices.audioDevices
+  );
 
-  const isRecordingDesktopAudio = captureDesktopAudio && virtualAudioRecorder;
-  const isRecordingMicrophoneAudio = captureMicrophoneAudio && microphone;
+  const isRecordingDesktopAudio =
+    captureDesktopAudio && Boolean(defaultDesktopAudioDevice);
+  const isRecordingMicrophoneAudio =
+    captureMicrophoneAudio && Boolean(defaultInputAudioDevice);
 
   const command: FfmpegCommandExt = ffmpeg({});
 
@@ -103,14 +85,16 @@ export async function recordScreen(
 
   if (isRecordingDesktopAudio) {
     command
-      .input(`audio=${virtualAudioRecorder}`)
+      .input(`audio=${defaultDesktopAudioDevice!.name}`)
       .inputFormat('dshow')
       .withOption('-strict -2');
     applyPreset(command, commonAudioPreset);
   }
 
   if (isRecordingMicrophoneAudio) {
-    command.input(`audio=${microphone}`).inputFormat('dshow');
+    command
+      .input(`audio=${defaultInputAudioDevice!.name}`)
+      .inputFormat('dshow');
     applyPreset(command, commonAudioPreset);
   }
 
