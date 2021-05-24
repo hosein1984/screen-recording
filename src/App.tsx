@@ -18,11 +18,40 @@ const App = () => {
   );
 
   const startRecording = () => {
-    screenRecorder.current.start(remote.getCurrentWindow(), './recording.mp4');
+    screenRecorder.current.start(remote.getCurrentWindow());
   };
 
-  const stopRecording = () => {
-    screenRecorder.current.stop();
+  const stopRecording = async () => {
+    await screenRecorder.current.stop();
+
+    const dialogOptions = {
+      filters: [
+        {
+          name: 'Video files',
+          extensions: ['mp4'],
+        },
+      ],
+    };
+    const result = await remote.dialog.showSaveDialog(
+      remote.getCurrentWindow(),
+      {
+        filters: [
+          {
+            name: 'Video files',
+            extensions: ['mp4'],
+          },
+        ],
+      }
+    );
+
+    if (!result.canceled) {
+      const filePath = result.filePath;
+      if (filePath) {
+        await screenRecorder.current.save(filePath);
+      }
+    } else {
+      // TODO Dispose
+    }
   };
 
   useEffect(() => {
@@ -70,7 +99,8 @@ const App = () => {
         onClick={startRecording}
         style={{
           margin: '10px',
-          ...(recorderState === RecorderState.IDLE
+          ...(recorderState === RecorderState.IDLE ||
+          recorderState === RecorderState.STOPPED
             ? { color: 'green', cursor: 'pointer' }
             : { color: 'gray', cursor: 'unset' }),
         }}

@@ -58,7 +58,6 @@ async function getDefaultInputAudioDevice(audioDevices: DeviceInfo[]) {
     }
 
     result = audioDevices.find((d) => d.name === defaultDeviceName);
-    console.log('result', result);
   }
 
   // 2. Use any device that have microphone in its name

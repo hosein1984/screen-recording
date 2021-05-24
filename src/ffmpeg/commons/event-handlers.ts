@@ -40,18 +40,24 @@ export function handleFfmpegEvents(
       .on('start', (commandLine: string) => {
         console.log('Spawned ffmpeg with command: ' + commandLine);
         onStart &&
-          onStart(commandLine, () => {
-            if (command.ffmpegProc && command.ffmpegProc.stdin) {
-              if (quitRetryCount < MAX_QUIT_RETRY_COUNT) {
-                quitCommand(command);
-                quitRetryCount += 1;
+          onStart({
+            ffmpegCommand: commandLine,
+            stop: () => {
+              if (command.ffmpegProc && command.ffmpegProc.stdin) {
+                if (quitRetryCount < MAX_QUIT_RETRY_COUNT) {
+                  quitCommand(command);
+                  quitRetryCount += 1;
+                } else {
+                  killCommand(command);
+                }
               } else {
+                // Panic: There is no proper way to stop the recoding :(
                 killCommand(command);
               }
-            } else {
-              // Panic: There is no proper way to stop the recoding :(
+            },
+            kill: () => {
               killCommand(command);
-            }
+            },
           });
       })
       .on('error', (err, stdout, stderr) => {

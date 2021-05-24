@@ -58,7 +58,11 @@ export type RecordScreenOptions = {
 };
 
 export interface FfmpegCommandCallbacks {
-  onStart?: (ffmpegCommand: string, stop: () => void) => void;
+  onStart?: (params: {
+    ffmpegCommand: string;
+    stop: () => void;
+    kill: () => void;
+  }) => void;
   onFinish?: () => void;
 }
 

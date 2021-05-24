@@ -15,6 +15,7 @@ import {
 import { handleFfmpegEvents } from '../commons/event-handlers';
 import { LIBX64_SIZE_FILTER } from '../commons/filters';
 import { DshowDeviceUtils } from './dshow-device-utils';
+import { createWriteStream, fstat } from 'original-fs';
 
 export async function recordScreen(
   options: RecordScreenOptions,

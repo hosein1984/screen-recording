@@ -3,4 +3,6 @@ export enum RecorderState {
   STARTING = 'starting',
   RECORDING = 'recording',
   STOPPING = 'stopping',
+  STOPPED = 'stopped',
+  SAVING = 'saving',
 }
