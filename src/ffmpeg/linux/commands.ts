@@ -26,6 +26,7 @@ import {
 import { AudioDevice, Display } from './types';
 import { handleFfmpegEvents } from '../commons/event-handlers';
 import sudo from 'sudo-prompt';
+import { PulseDeviceUtils } from './pulse-device-utils';
 
 async function listDisplays(): Promise<Display[]> {
   return new Promise((resolve, reject) => {
@@ -65,21 +66,6 @@ async function addMonitorInfosToDisplays(displays: Display[]): Promise<void> {
   });
 }
 
-async function listAudioDevices(): Promise<AudioDevice[]> {
-  return new Promise((resolve, reject) => {
-    /**
-     * pacmd can be used to introspect or reconfigure a running PulseAudio sound server during runtime.
-     */
-    exec(`pacmd list-sources`, (error, stdout, stderr) => {
-      if (error) {
-        reject(error);
-      }
-
-      resolve(parsePacmdOutput(stdout));
-    });
-  });
-}
-
 export async function listDisplayDevices(): Promise<Display[]> {
   const displays = await listDisplays();
   await addMonitorInfosToDisplays(displays);
@@ -98,7 +84,8 @@ export async function recordScreen(
   } = options;
 
   const displays = await listDisplayDevices();
-  const audioDevices = await listAudioDevices();
+
+  const audioDevices = await PulseDeviceUtils.listDevices();
 
   // For now we just use the first display and its first screen. That makes the API more lean
   const defaultDisplay = displays[0];
@@ -108,17 +95,17 @@ export async function recordScreen(
     (s) => s.id === defaultScreenId
   )!;
 
-  const monitorAudioDevice = audioDevices.find(
-    (d) => d.isMonitor && d.io === DeviceIOType.OUTPUT
+  const defaultDesktopAudioDevice = await PulseDeviceUtils.getDefaultDesktopAudioDevice(
+    audioDevices
   );
-  const microphoneDevice = audioDevices.find(
-    (d) => d.io === DeviceIOType.INPUT
+  const defaultInputAudioDevice = await PulseDeviceUtils.getDefaultInputAudioDevice(
+    audioDevices
   );
 
   const isRecordingDesktopAudio =
-    captureDesktopAudio && Boolean(monitorAudioDevice);
+    captureDesktopAudio && Boolean(defaultDesktopAudioDevice);
   const isRecordingMicrophoneAudio =
-    captureMicrophoneAudio && Boolean(microphoneDevice);
+    captureMicrophoneAudio && Boolean(defaultInputAudioDevice);
 
   const command: FfmpegCommandExt = ffmpeg({});
 
@@ -157,21 +144,25 @@ export async function recordScreen(
 
   // Using the following two caused non-monotonous results for me but the default worked fine.
   // TODO: Need another linux device to test these more
-  if (isRecordingDesktopAudio && monitorAudioDevice) {
+  if (isRecordingDesktopAudio && defaultDesktopAudioDevice) {
     command
-      .input(monitorAudioDevice.name)
+      .input(defaultDesktopAudioDevice.name)
       .inputFormat('pulse')
-      .withInputOption(`-channels ${monitorAudioDevice.spec.channels}`)
-      .withInputOption(`-sample_rate ${monitorAudioDevice.spec.sampleRate}`);
+      .withInputOption(`-channels ${defaultDesktopAudioDevice.spec.channels}`)
+      .withInputOption(
+        `-sample_rate ${defaultDesktopAudioDevice.spec.sampleRate}`
+      );
     applyPreset(command, commonAudioPreset);
   }
 
-  if (captureMicrophoneAudio && microphoneDevice) {
+  if (captureMicrophoneAudio && defaultInputAudioDevice) {
     command
-      .input(microphoneDevice.name)
+      .input(defaultInputAudioDevice.name)
       .inputFormat('pulse')
-      .withInputOption(`-channels ${microphoneDevice.spec.channels}`)
-      .withInputOption(`-sample_rate ${microphoneDevice.spec.sampleRate}`);
+      .withInputOption(`-channels ${defaultInputAudioDevice.spec.channels}`)
+      .withInputOption(
+        `-sample_rate ${defaultInputAudioDevice.spec.sampleRate}`
+      );
     applyPreset(command, commonAudioPreset);
   }
 

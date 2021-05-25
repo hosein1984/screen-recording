@@ -7,11 +7,18 @@ import {
 import { RecorderState } from './types';
 import { getSurroundingScreenBounds } from './utils';
 import { EventEmitter } from 'events';
+import { resolve } from 'path';
+import { tmpdir } from 'os';
+import { format } from 'date-fns';
+import { reject } from 'lodash';
+import { existsSync } from 'original-fs';
+import { move } from 'fs-extra';
 
 export class ScreenRecorder extends EventEmitter {
   private _state = RecorderState.IDLE;
   private _stopCallback?: () => void;
   private _recordingPromise?: Promise<void>;
+  private _tempRecordingFilePath?: string;
 
   constructor() {
     super();
@@ -20,10 +27,13 @@ export class ScreenRecorder extends EventEmitter {
   }
 
   /** The current behavior is to capture the screen that the passed in window resides in. */
-  public start = (browserWindow: BrowserWindow, saveFilePath: string) => {
+  public start = (browserWindow: BrowserWindow) => {
     const screenBounds = getSurroundingScreenBounds(browserWindow);
 
-    if (this._state !== RecorderState.IDLE) {
+    if (
+      this._state !== RecorderState.IDLE &&
+      this._state !== RecorderState.STOPPED
+    ) {
       console.log(
         'Recording could not be started because the current state is: ' +
           this._state
@@ -34,11 +44,16 @@ export class ScreenRecorder extends EventEmitter {
 
     this.setState(RecorderState.STARTING);
 
+    this._tempRecordingFilePath = resolve(
+      tmpdir(),
+      `Fluxble Recording - ${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.mp4`
+    );
+
     const options: RecordScreenOptions = {
       platform: process.platform,
       captureDesktopAudio: true,
       captureMicrophoneAudio: true,
-      filePath: './recording.mp4',
+      filePath: this._tempRecordingFilePath,
       captureTarget: {
         type: CaptureTargetType.AREA,
         ...screenBounds,
@@ -48,9 +63,9 @@ export class ScreenRecorder extends EventEmitter {
     this._recordingPromise = recordScreen(options, {
       onFinish: () => {
         console.log('Screen recording has finished');
-        this.setState(RecorderState.IDLE);
+        this.setState(RecorderState.STOPPED);
       },
-      onStart: (_ffmpegCommand, stop) => {
+      onStart: ({ stop, kill }) => {
         this.setState(RecorderState.RECORDING);
         this._stopCallback = stop;
       },
@@ -81,10 +96,35 @@ export class ScreenRecorder extends EventEmitter {
     return this._recordingPromise || Promise.resolve();
   };
 
-  private setState(newState: RecorderState) {
+  public save = async (saveFilePath: string) => {
+    if (!this._tempRecordingFilePath) {
+      this.setState(RecorderState.IDLE);
+      throw new Error(
+        'Temp recording file path is not available. Something has probably gone wrong'
+      );
+    }
+
+    if (!existsSync(this._tempRecordingFilePath)) {
+      this.setState(RecorderState.IDLE);
+      throw new Error(
+        'Could not find temp recoding file. Something has probably gone wrong'
+      );
+    }
+
+    this.setState(RecorderState.SAVING);
+
+    await move(this._tempRecordingFilePath, saveFilePath, {
+      overwrite: true,
+    });
+
+    this._tempRecordingFilePath = undefined;
+    this.setState(RecorderState.IDLE);
+  };
+
+  private setState = (newState: RecorderState) => {
     const oldState = this._state;
     this._state = newState;
     this.emit('state-changed', newState);
     console.log(`Screen recorder state changed: ${oldState} -> ${newState}`);
-  }
+  };
 }

@@ -20,11 +20,41 @@ const App = () => {
   );
 
   const startRecording = () => {
-    screenRecorder.current.start(remote.getCurrentWindow(), './recording.mp4');
+    screenRecorder.current.start(remote.getCurrentWindow());
   };
 
-  const stopRecording = () => {
-    screenRecorder.current.stop();
+  const stopRecording = async () => {
+    await screenRecorder.current.stop();
+
+    const dialogOptions = {
+      filters: [
+        {
+          name: 'Video files',
+          extensions: ['mp4'],
+        },
+      ],
+    };
+    const result = await remote.dialog.showSaveDialog(
+      remote.getCurrentWindow(),
+      {
+        filters: [
+          {
+            name: 'Video files',
+            extensions: ['mp4'],
+          },
+        ],
+      }
+    );
+
+    if (!result.canceled) {
+      const filePath = result.filePath;
+      if (filePath) {
+        console.log('FilePath', filePath);
+        await screenRecorder.current.save(filePath);
+      }
+    } else {
+      // TODO Dispose
+    }
   };
 
   useEffect(() => {
@@ -79,22 +109,22 @@ const App = () => {
   };
 
   useEffect(() => {
-    isFfmpegInstalled().then((isInstalled) => {
-      console.log('Is ffmpeg installed: ', isInstalled);
-      if (!isInstalled) {
-        sudo.exec(
-          'apt update && apt install ffmpeg',
-          {
-            name: 'Screen Recorder Playground',
-          },
-          (error, stdout, stderr) => {
-            console.log('error', error);
-            console.log('stderr', stderr);
-            console.log('stdout', stdout);
-          }
-        );
-      }
-    });
+    // isFfmpegInstalled().then((isInstalled) => {
+    //   console.log('Is ffmpeg installed: ', isInstalled);
+    //   if (!isInstalled) {
+    //     sudo.exec(
+    //       'apt update && apt install ffmpeg',
+    //       {
+    //         name: 'Screen Recorder Playground',
+    //       },
+    //       (error, stdout, stderr) => {
+    //         console.log('error', error);
+    //         console.log('stderr', stderr);
+    //         console.log('stdout', stdout);
+    //       }
+    //     );
+    //   }
+    // });
   }, []);
 
   return (
@@ -106,7 +136,8 @@ const App = () => {
         onClick={startRecording}
         style={{
           margin: '10px',
-          ...(recorderState === RecorderState.IDLE
+          ...(recorderState === RecorderState.IDLE ||
+          recorderState === RecorderState.STOPPED
             ? { color: 'green', cursor: 'pointer' }
             : { color: 'gray', cursor: 'unset' }),
         }}
