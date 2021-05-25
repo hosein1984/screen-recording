@@ -25,6 +25,7 @@ import {
 } from '../commons/presets';
 import { AudioDevice, Display } from './types';
 import { handleFfmpegEvents } from '../commons/event-handlers';
+import sudo from 'sudo-prompt';
 
 async function listDisplays(): Promise<Display[]> {
   return new Promise((resolve, reject) => {
@@ -182,11 +183,48 @@ export async function recordScreen(
   command.complexFilter([
     LIBX64_SIZE_FILTER,
     ...(isRecordingDesktopAudio && isRecordingMicrophoneAudio
-      ? [MIX_AUDIO_SOURCES_FILTER]
+      ? // ? [MIX_AUDIO_SOURCES_FILTER]
+        [
+          '[1:a]volume=1.0,aresample=async=1[a1]',
+          '[2:a]volume=5.0,aresample=async=1[a2]',
+          '[a1][a2]amix',
+        ]
       : []),
   ]);
+
+  command.withOption('-threads 4');
 
   command.save(filePath);
 
   return resultPromise;
+}
+
+async function isFfmpegInstalled() {
+  return new Promise((resolve, reject) => {
+    exec('ffmpeg -version', (error, stdout, stderr) => {
+      console.log(error, stderr);
+      if (error) {
+        if (stderr.includes('ffmpeg: not found')) {
+          resolve(false);
+        }
+      }
+
+      resolve(true);
+    });
+  });
+}
+
+async function installFfmpeg() {
+  sudo.exec(
+    'apt update && apt install ffmpeg',
+    // also install pulseaudio to be on the safe side
+    {
+      name: 'Screen Recorder Playground',
+    },
+    (error, stdout, stderr) => {
+      console.log('error', error);
+      console.log('stderr', stderr);
+      console.log('stdout', stdout);
+    }
+  );
 }

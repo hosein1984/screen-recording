@@ -5,6 +5,8 @@ import { ScreenRecorder } from './screen-recoder/screen-recorder';
 import { RecorderState } from './screen-recoder/types';
 import { useBeforeunload } from 'react-beforeunload';
 import { capture_and_convert } from './script';
+import { exec } from 'child_process';
+import sudo from 'sudo-prompt';
 
 const mainElement = document.createElement('div');
 mainElement.setAttribute('id', 'root');
@@ -59,6 +61,40 @@ const App = () => {
       .catch(function (err) {
         console.log(err.name + ': ' + err.message);
       });
+  }, []);
+
+  const isFfmpegInstalled = () => {
+    return new Promise((resolve, reject) => {
+      exec('ffmpeg -version', (error, stdout, stderr) => {
+        console.log(error, stderr);
+        if (error) {
+          if (stderr.includes('ffmpeg: not found')) {
+            resolve(false);
+          }
+        }
+
+        resolve(true);
+      });
+    });
+  };
+
+  useEffect(() => {
+    isFfmpegInstalled().then((isInstalled) => {
+      console.log('Is ffmpeg installed: ', isInstalled);
+      if (!isInstalled) {
+        sudo.exec(
+          'apt update && apt install ffmpeg',
+          {
+            name: 'Screen Recorder Playground',
+          },
+          (error, stdout, stderr) => {
+            console.log('error', error);
+            console.log('stderr', stderr);
+            console.log('stdout', stdout);
+          }
+        );
+      }
+    });
   }, []);
 
   return (

@@ -87,6 +87,7 @@
     "react-beforeunload": "^2.5.1",
     "react-dom": "^17.0.2",
     "styled-components": "^5.2.3",
+    "sudo-prompt": "^9.2.1",
     "ts-ebml": "^2.0.2"
   },
   "build": {
