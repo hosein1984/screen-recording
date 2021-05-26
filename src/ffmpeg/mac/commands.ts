@@ -78,7 +78,7 @@ export async function recordScreen(
       //   .withInputOption(
       //     `-video_size ${captureTarget.width}x${captureTarget.height}`
       //   );
-      command.input(`${screenCaptureRecorder}:${voiceRecorder}`).inputFormat('avfoundation');
+      command.input(`${screenCaptureRecorder?.name}:${voiceRecorder?.name}`).inputFormat('avfoundation');
       break;
     case CaptureTargetType.WINDOW:
      command.input(`title=${captureTarget.windowName}`).inputFormat('avfoundation');
