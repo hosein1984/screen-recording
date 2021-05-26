@@ -8,7 +8,7 @@ import {
 import { parseAVFoundationDevices } from './parsers';
 import { AVFoundationDevices } from './types';
 import ffmpeg from 'fluent-ffmpeg';
-import { applyPreset, defaultPreset } from '../commons/presets';
+import { applyPreset, defaultPreset,libx264Preset,commonVideoPreset } from '../commons/presets';
 import { handleFfmpegEvents } from '../commons/event-handlers';
 
 export function listAVFoundationDevices(
@@ -18,9 +18,11 @@ export function listAVFoundationDevices(
     const result = exec(
       `${ffmpegPath} -f avfoundation -list_devices true -i ""`,
       (error, stdout, stderr) => {
+        console.log(error, stdout, stderr)
         resolve(parseAVFoundationDevices(stderr));
       }
     );
+    
   });
 }
 
@@ -42,11 +44,14 @@ export async function recordScreen(
     );
   }
 
-  const devices = await listAVFoundationDevices(ffmpegPath);
+  const devices =  await listAVFoundationDevices(ffmpegPath);
 
   console.log('AV Foundation devices: ', devices);
 
   // TODO: Find out which devices we need
+
+  const screenCaptureRecorder = devices.videoDevices.find(d=>d.name.includes("Capture"));
+  const voiceRecorder = devices.audioDevices.find(item=>item.name.includes("Microphone"));
 
   // const isRecordingDesktopAudio = captureDesktopAudio && virtualAudioRecorder;
   // const isRecordingMicrophoneAudio = captureMicrophoneAudio && microphone;
@@ -62,7 +67,7 @@ export async function recordScreen(
 
   switch (captureTarget.type) {
     case CaptureTargetType.ENTIRE_DISPLAY:
-      // command.input('desktop').inputFormat('gdigrab');
+       command.input('desktop').inputFormat('avfoundation');
       break;
     case CaptureTargetType.AREA:
       // command
@@ -73,15 +78,16 @@ export async function recordScreen(
       //   .withInputOption(
       //     `-video_size ${captureTarget.width}x${captureTarget.height}`
       //   );
+      command.input(`${screenCaptureRecorder}:${voiceRecorder}`).inputFormat('avfoundation');
       break;
     case CaptureTargetType.WINDOW:
-      // command.input(`title=${captureTarget.windowName}`).inputFormat('gdigrab');
+     command.input(`title=${captureTarget.windowName}`).inputFormat('avfoundation');
       break;
   }
 
   // command.inputFormat('gdigrab');
-  // applyPreset(command, libx264Preset);
-  // applyPreset(command, commonVideoPreset);
+   applyPreset(command, libx264Preset);
+   applyPreset(command, commonVideoPreset);
 
   // if (isRecordingDesktopAudio) {
   //   command
@@ -104,7 +110,7 @@ export async function recordScreen(
   // ]);
 
   // TODO: Uncomment this to actually start the recording
-  // command.save(filePath);
+   command.save(filePath);
 
   return resultPromise;
 }
