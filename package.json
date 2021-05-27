@@ -43,6 +43,7 @@
     "@types/react": "^17.0.4",
     "@types/react-beforeunload": "^2.1.0",
     "@types/react-dom": "^17.0.3",
+    "@types/recordrtc": "^5.6.5",
     "@types/styled-components": "^5.1.9",
     "@typescript-eslint/eslint-plugin": "^4.22.0",
     "@typescript-eslint/parser": "^4.22.0",
@@ -88,8 +89,10 @@
     "react": "^17.0.2",
     "react-beforeunload": "^2.5.1",
     "react-dom": "^17.0.2",
+    "recordrtc": "^5.6.2",
     "styled-components": "^5.2.3",
     "sudo-prompt": "^9.2.1",
+    "tiny-typed-emitter": "^2.0.3",
     "ts-ebml": "^2.0.2"
   },
   "build": {
