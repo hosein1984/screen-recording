@@ -10,7 +10,6 @@ import { AVFoundationDevices } from './types';
 import ffmpeg from 'fluent-ffmpeg';
 import { applyPreset, defaultPreset,libx264Preset,commonVideoPreset } from '../commons/presets';
 import { handleFfmpegEvents } from '../commons/event-handlers';
-import { useEffect } from 'react';
 
 // export function listAVFoundationDevices(
 //   ffmpegPath: string
@@ -26,22 +25,47 @@ import { useEffect } from 'react';
 //   });
 // }
 
-function helpCommand(ffmpegPath:string){
-  const help=exec(`${ffmpegPath} -h`,
-  (error,stdout,stderr)=>{
-    console.log("Help Command on ffmpeg is:")
-    console.log(stdout)
+
+async function helpCommand(ffmpegPath:string) {
+  return new Promise((resolve, reject) => {
+    exec(`${ffmpegPath} -h`, (error, stdout, stderr) => {
+      console.log("Help Command on ffmpeg is:")
+      console.log(stdout);
+      console.log("Help Command on ffmpeg error is:")
+      console.log(error);
+      console.log("Help Command on ffmpeg stderr is:")
+      console.log(stderr)
+      if (error) {
+        if (stderr.includes('ffmpeg: not found')) {
+          resolve(false);
+        }
+      }
+
+      resolve(true);
+    });
   });
 }
 
-function versionCommand(ffmpegPath:String){
-  const version=exec(`${ffmpegPath} -version`,
-  (error,stdout,stderr)=>{
+
+async function versionCommand(ffmpegPath:string) {
+  return new Promise((resolve, reject) => {
+    exec(`${ffmpegPath} -version`, (error, stdout, stderr) => {
     console.log("Version Command on ffmpeg is:")
-    console.log(stdout)
+    console.log(stdout);
+    console.log("Version Command on ffmpeg error is:")
+    console.log(error);
+    console.log("Version Command on ffmpeg stderr is:")
+    console.log(stderr);
+      if (error) {
+        if (stderr.includes('ffmpeg: not found')) {
+          resolve(false);
+        }
+      }
+
+      resolve(true);
+    });
   });
 }
-
  export async function recordScreen(
   options: RecordScreenOptions,
   callbacks: FfmpegCommandCallbacks
@@ -57,7 +81,7 @@ function versionCommand(ffmpegPath:String){
   helpCommand(`${ffmpegPath}`);
   versionCommand(`${ffmpegPath}`)
 
-  
+
 //   if (!ffmpegPath) {
 //     throw new Error(
 //       'ffmpeg path must be specified for screen recording on mac'
